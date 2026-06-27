@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum PlanTier {
+  STARTER
+  BUSINESS
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+// Mirrors the 8 product types from the Product Builder
+enum ProductType {
+  PAYMENT
+  MENU
+  DONATION
+  REVIEW
+  CARD
+  ATTENDANCE
+  VISITOR
+  ASSET
+}
+
+enum ProductStatus {
+  DRAFT
+  LIVE
+  DISABLED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  businessName String?
+  email        String     @unique
+  password     String
+  role         Role       @default(USER)
+  status       UserStatus @default(ACTIVE)
+  logoUrl      String?
+  themeColor   String?    @default("#6D5CFF")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  products     Product[]
+  subscription Subscription?
+  resetTokens  PasswordResetToken[]
+
+  @@index([email])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Plan {
+  id           String   @id @default(cuid())
+  tier         PlanTier @unique
+  name         String
+  priceMonthly Int // in whole dollars, e.g. 29
+  tapLimit     Int // taps allowed per month, -1 = unlimited
+  productLimit Int // products allowed, -1 = unlimited
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String             @unique
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      Plan               @relation(fields: [planId], references: [id])
+  status    SubscriptionStatus @default(TRIALING)
+  renewsAt  DateTime
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
+
+model Template {
+  id         String      @id @default(cuid())
+  name       String
+  type       ProductType
+  config     Json // default field values / layout config used by the builder
+  usageCount Int         @default(0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Product {
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       ProductType
+  name       String
+  slug       String        @unique
+  status     ProductStatus @default(DRAFT)
+  // type-specific data: bankName/accountNumber/accountName, whatsapp,
+  // website, instagram, facebook, googleReviewUrl, menuItems, etc.
+  fields     Json
+  themeColor String?       @default("#6D5CFF")
+  logoUrl    String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  taps Tap[]
+
+  @@index([userId])
+  @@index([slug])
+}
+
+model Tap {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  device    String? // "ios" | "android" | "other" — derived from user-agent
+  userAgent String?
+  ip        String?
+  location  String?
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
