@@ -6,7 +6,7 @@ const asyncHandler = require('../utils/asyncHandler');
 
 // POST /api/auth/register
 const register = asyncHandler(async (req, res) => {
-  const { name, businessName, email, password } = req.body;
+  const { name, businessName, email, password, role } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ message: 'Name, email and password are required.' });
@@ -29,6 +29,7 @@ const register = asyncHandler(async (req, res) => {
       businessName,
       email,
       password: hashed,
+      role: role ?? "USER",
       subscription: starterPlan
         ? {
             create: {
