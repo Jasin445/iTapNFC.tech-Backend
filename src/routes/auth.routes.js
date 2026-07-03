@@ -7,6 +7,7 @@ const {
   me,
   forgotPassword,
   resetPassword,
+  inAppPasswordReset,
 } = require('../controllers/auth.controller');
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.post('/register', authLimiter, register);
 router.post('/login', authLimiter, login);
 router.post('/forgot-password', authLimiter, forgotPassword);
 router.post('/reset-password', authLimiter, resetPassword);
+router.post('/change-password', authLimiter, requireAuth, inAppPasswordReset);
 router.get('/me', requireAuth, me);
 
 module.exports = router;

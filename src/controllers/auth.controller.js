@@ -139,4 +139,32 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.json({ message: 'Password updated. You can now log in.' });
 });
 
-module.exports = { register, login, me, forgotPassword, resetPassword };
+const inAppPasswordReset = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: 'Current password and new password are required.' });
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: req?.user?.email } });
+
+  if (!user) {
+    return res.status(404).json({ message: 'User not found.' });
+  }
+
+  if (user.status === 'SUSPENDED') {
+    return res.status(403).json({ message: 'This account has been suspended. Contact support.' });
+  }
+
+  const matches = await bcrypt.compare(currentPassword, user.password);
+  if (!matches) {
+    return res.status(401).json({ message: 'Current password is incorrect.' });
+  }
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
+
+  return res.status(200).json({ message: 'Password updated successfully.' });
+});
+
+module.exports = { register, login, me, forgotPassword, resetPassword, inAppPasswordReset };

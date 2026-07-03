@@ -5,13 +5,13 @@ async function requireAuth(req, res, next) {
   try {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-
+    
     if (!token) {
       return res.status(401).json({ message: 'No token provided.' });
     }
-
+    
     const decoded = verifyToken(token);
-
+    
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       select: {
@@ -25,7 +25,7 @@ async function requireAuth(req, res, next) {
         logoUrl: true,
       },
     });
-
+    
     if (!user) {
       return res.status(401).json({ message: 'User no longer exists.' });
     }
@@ -36,6 +36,7 @@ async function requireAuth(req, res, next) {
     req.user = user;
     next();
   } catch (err) {
+    console.log(err)
     return res.status(401).json({ message: 'Invalid or expired token.' });
   }
 }
